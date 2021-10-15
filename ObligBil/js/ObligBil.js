@@ -1,217 +1,152 @@
 'use strict';
-/*
-    Tegner en bil.
-*/
 
-// Globale variabler: Disse er synlig på tvers av .js filene inkludert i .html-fila.
-
-// Kontekst og canvas:
-let gl = null;
-let canvas = null;
-
-// Matriser
-let modelMatrix = null;
-let viewMatrix = null;
-let modelviewMatrix = null;
-let projectionMatrix = null;
-
-// Kameraposisjon:
-let camPosX = 70;
-let camPosY = 30;
-let camPosZ = 35;
-
-// Kamera ser mot ...
-let lookAtX = 0;
-let lookAtY = 0;
-let lookAtZ = 0;
-
-// Kameraorientering:
-let upX = 0;
-let upY = 1;
-let upZ = 0;
-
-// Tar vare på tastetrykk:
-let currentlyPressedKeys = [];
-
-// Matrisepekere/referanser:
-let u_modelviewMatrix = null;
-let u_projectionMatrix = null;
-
-let lastTime = 0.0;
-
-//Variabel for å beregne og vise FPS:
-let fpsData = new Object(); //Alternativt: let fpsData = {};   //Setter fpsData til en tomt objekt.
-
-function initContext()
+class ObligBil
 {
-    // Hent <canvas> elementet
-    canvas = document.getElementById('webgl');
-
-    // Rendering context for WebGL:
-    gl = canvas.getContext('webgl');
-    if (!gl) {
-        console.log('Fikk ikke tak i rendering context for WebGL');
-        return false;
-    }
-
-    gl.viewport(0,0,canvas.width,canvas.height);
-
-    document.addEventListener('keyup', handleKeyUp, false);
-    document.addEventListener('keydown', handleKeyDown, false);
-
-    return true;
-}
-
-function handleKeyUp(event)
-{
-    console.log(event.which);
-    currentlyPressedKeys[event.which] = false;
-}
-
-function handleKeyDown(event)
-{
-    currentlyPressedKeys[event.which] = true;
-}
-
-function setupCamera()
-{
-    // VIEW-matrisa:
-    viewMatrix.setLookAt(camPosX, camPosY, camPosZ, lookAtX, lookAtY, lookAtZ, upX, upY, upZ);
-    // PROJECTION-matrisa: cuon-utils: Matrix4.prototype.setPerspective = function(fovy, aspect, near, far)
-    projectionMatrix.setPerspective(45, canvas.width / canvas.height, 0.1, 10000);
-}
-
-function handleKeys(elapsed)
-{
-    let camPosVec = vec3.fromValues(camPosX, camPosY, camPosZ);
-    //Enkel rotasjon av kameraposisjonen:
-    if (currentlyPressedKeys[65])
-    {    //A
-        rotateVector(2, camPosVec, 0, 1, 0);  //Roterer camPosVec 2 grader om y-aksen.
-    }
-    if (currentlyPressedKeys[68])
-    {	//S
-        rotateVector(-2, camPosVec, 0, 1, 0);  //Roterer camPosVec 2 grader om y-aksen.
-    }
-    if (currentlyPressedKeys[87])
-    {	//W
-        rotateVector(2, camPosVec, 1, 0, 0);  //Roterer camPosVec 2 grader om x-aksen.
-    }
-    if (currentlyPressedKeys[83])
-    {	//D
-        rotateVector(-2, camPosVec, 1, 0, 0);  //Roterer camPosVec 2 grader om x-aksen.
-    }
-
-    //Zoom inn og ut:
-    if (currentlyPressedKeys[86])
-    { //V
-        vec3.scale(camPosVec, camPosVec, 1.05);
-    }
-    if (currentlyPressedKeys[66])
-    {	//B
-        vec3.scale(camPosVec, camPosVec, 0.95);
-    }
-
-    //Sving på hjulene
-    if (currentlyPressedKeys[89])
-    { //Y
-        steeringRot+=1;
-    }
-    if (currentlyPressedKeys[85])
-    {	//U
-        steeringRot-=1;
-    }
-
-    camPosX = camPosVec[0];
-    camPosY = camPosVec[1];
-    camPosZ = camPosVec[2];
-    setupCamera();
-}
-
-function draw(currentTime)
-{
-    // Sørger for at draw kalles på nytt:
-    window.requestAnimationFrame(draw);
-
-    if (currentTime === undefined)
-        currentTime = 0; 	//Udefinert første gang.
-
-    // Beregner og viser FPS:
-    if (currentTime - fpsData.lastTimeStamp >= 1000)
-    { //dvs. et sekund har forløpt...
-        //Viser FPS i .html ("fps" er definert i .html fila):
-        document.getElementById('fps').innerHTML = fpsData.frameCount;
-        fpsData.frameCount = 0;
-        fpsData.lastTimeStamp = currentTime; //Brukes for å finne ut om det har gått 1 sekund - i så fall beregnes FPS på nytt.
-    }
-
-    // Tar høyde for varierende frame rate:
-    let elapsed = 0.0;			// Forløpt tid siden siste kalle på draw().
-    if (lastTime !== 0.0)		// Først gang er lastTime = 0.0.
-        elapsed = (currentTime - lastTime)/1000; // Deler på 1000 for å operere med sekunder.
-    lastTime = currentTime;						// Setter lastTime til currentTime.
-
-    // Rensk skjermen:
-    gl.clear(gl.COLOR_BUFFER_BIT);
-
-    // GJENNOMSIKTIGHET:
-    // Aktiverer fargeblanding (&indirekte gjennomsiktighet):
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-    // BRUKERINPUT;
-    handleKeys(elapsed);
-
-    // TEGNER:
-    drawCoord(elapsed);
-    //drawXZPlane(elapsed);
-    drawCar();
-    fpsData.frameCount++;
-}
-
-function main()
-{
-    if (!initContext())
-        return;
-
-    let uri = document.baseURI;
-    document.getElementById('uri').innerHTML = uri;
-
-    // SHADERE fra html-fila:
-    let vertexShaderSource = document.getElementById('vertex-shader').innerHTML;
-    let fragmentShaderSource = document.getElementById('fragment-shader').innerHTML;
-    if (!initShaders(gl, vertexShaderSource, fragmentShaderSource))
+    constructor()
     {
-        console.log('Feil ved initialisering av shaderkoden - se over koden på nytt.');
-        return;
+        // Kontekst og canvas:
+        this.gl = null;
+        this.canvas = null;
+        this.camera = null;
+
+        // Tar vare på tastetrykk:
+        this.currentlyPressedKeys = [];
+
+        this.lastTime = 0.0;
+
+        //Variabel for å beregne og vise FPS:
+        this.fpsData = new Object(); //Alternativt: let fpsData = {};   //Setter fpsData til en tomt objekt.
     }
 
-    // AKTIVERER DYBDETEST:
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LESS);
+    start()
+    {
+        this.initContext();
 
-    // Initialiserer matrisene:
-    modelMatrix = new Matrix4();
-    viewMatrix = new Matrix4();
-    modelviewMatrix = new Matrix4();
-    projectionMatrix = new Matrix4();
+        let uri = document.baseURI;
+        document.getElementById('uri').innerHTML = uri;
 
-    // Initialiserer verteksbuffer:
-    initCoordBuffers();
-    initXZPlaneBuffers();
-    initCarBuffers();
+        // SHADERE fra html-fila:
+        let vertexShaderSource = document.getElementById('my-vertex-shader').innerHTML;
+        let fragmentShaderSource = document.getElementById('my-fragment-shader').innerHTML;
+        if (!initShaders(this.gl, vertexShaderSource, fragmentShaderSource)) {
+            console.log('Feil ved initialisering av shaderkoden - se over koden på nytt.');
+            return;
+        }
 
-    // Kopler matriseshaderparametre med tilsvarende Javascript-variabler:
-    u_modelviewMatrix = gl.getUniformLocation(gl.program, 'u_modelviewMatrix');
-    u_projectionMatrix = gl.getUniformLocation(gl.program, 'u_projectionMatrix');
+        // AKTIVERER DYBDETEST:
+        this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.depthFunc(this.gl.LESS);
 
-    // Setter bakgrunnsfarge:
-    gl.clearColor(0, 0, 0, 1.0); //RGBA
+        // Kamera:
+        this.camera = new Camera(this.canvas, this.currentlyPressedKeys);
+        this.camera.setCamera();
+        // Koord:
+        this.coord = new Coord(this.gl, this.camera);
+        this.coord.initBuffers();
 
-    // Initialiserer variabel for beregning av FPS:
-    fpsData.frameCount = 0;
-    fpsData.lastTimeStamp = 0;
+        // Kubemann:
+        this.car = new DrawCar(this.gl, this.camera);
+        this.car.initBuffers();
+        // XZPlane:
+        this.xzplane = new XZPlane(this.gl, this.camera, this.canvas);
+        this.xzplane.initBuffers();
 
-    // Start animasjonsløkke:
-    draw();
+        // Setter bakgrunnsfarge:
+        this.gl.clearColor(0, 0, 0, 1.0); //RGBA
+
+        // Initialiserer variabel for beregning av FPS:
+        this.fpsData.antallFrames = 0;
+        this.fpsData.forrigeTidsstempel = 0;
+
+        // Start animasjonsløkke:
+        this.draw();
+    }
+
+    initContext()
+    {
+        // Hent <canvas> elementet
+        this.canvas = document.getElementById('webgl');
+
+        // Rendering context for WebGL:
+        this.gl = this.canvas.getContext('webgl');
+
+        if (!this.gl)
+        {
+            console.log('Fikk ikke tak i rendering context for WebGL');
+            return false;
+        }
+
+        this.gl.viewport(0,0,this.canvas.width,this.canvas.height);
+
+        //NB! Legg merke til .bind(this)
+        document.addEventListener('keyup', this.handleKeyUp.bind(this), false);
+        document.addEventListener('keydown', this.handleKeyDown.bind(this), false);
+    }
+
+    handleKeyUp(event)
+    {
+        this.currentlyPressedKeys[event.which] = false;
+    }
+
+    handleKeyDown(event)
+    {
+        this.currentlyPressedKeys[event.which] = true;
+    }
+
+    handleKeys(elapsed)
+    {
+        // Kameraet kontrollerer seg selv.
+        this.camera.handleKeys(elapsed);
+        // Dersom kuben skal animeres håndterer den det selv.
+        this.car.handleKeys(elapsed, this.currentlyPressedKeys);
+    }
+
+    draw(currentTime)
+    {
+        // Sørger for at draw kalles på nytt:
+        window.requestAnimationFrame(this.draw.bind(this)); //Merk bind()
+
+        if (currentTime === undefined)
+            currentTime = 0; 	//Udefinert første gang.
+
+        // Beregner og viser FPS:
+        if (currentTime - this.fpsData.forrigeTidsstempel >= 1000)
+        { //dvs. et sekund har forløpt...
+            //Viser FPS i .html ("fps" er definert i .html fila):
+            document.getElementById('fps').innerHTML = this.fpsData.antallFrames;
+            this.fpsData.antallFrames = 0;
+            this.fpsData.forrigeTidsstempel = currentTime; //Brukes for å finne ut om det har gått 1 sekund - i så fall beregnes FPS på nytt.
+        }
+
+        // Tar høyde for varierende frame rate:
+        let elapsed = 0.0;			// Forløpt tid siden siste kalle på draw().
+        if (this.lastTime !== 0.0)		// Først gang er lastTime = 0.0.
+            elapsed = (currentTime - this.lastTime)/1000; // Deler på 1000 for å operere med sekunder.
+        this.lastTime = currentTime;						// Setter lastTime til currentTime.
+
+        // Rensk skjermen:
+        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+        // GJENNOMSIKTIGHET:
+        // Aktiverer fargeblanding (&indirekte gjennomsiktighet):
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+        // TEGNER...
+        this.coord.draw(elapsed);
+        this.xzplane.draw(elapsed);
+
+
+        // Tegner kubemannen:
+        let modelMatrix = new Matrix4();
+        modelMatrix.setIdentity();
+        modelMatrix.translate(5, 6, -5);
+        this.car.draw(elapsed, modelMatrix);
+
+
+        // BRUKERINPUT;
+        this.handleKeys(elapsed);
+
+        this.fpsData.antallFrames++;
+    }
 }

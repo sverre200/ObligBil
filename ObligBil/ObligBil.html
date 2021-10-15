@@ -5,39 +5,39 @@
     <title>WebGL: Bil ...</title>
 </head>
 
-<body onload="main()">
-<canvas id="webgl" width="1000" height="800">
-    Denne nettleseren støtter ikke "canvas"-elementet!
-</canvas>
-<div id="fps-counter">
-    FPS: <span id="fps">--</span><br>
-    Base-URI: <span id="uri">--</span>
-</div>
-<div id="rotantion-angle">
-    Styrevinkel: <span id="angle">--</span>
-</div>
-<div>
-    WASD rotere kamera.<br>
-    VB zoom inn/ut<br>
-    YU sving fremhjulene<br>
-</div>
-<script src="../lib/webgl-utils.js"></script>
-<script src="../lib/webgl-debug.js"></script>
-<script src="../lib/cuon-utils.js"></script>
-<script src="../lib/cuon-matrix.js"></script>
-<script src="../lib/gl-matrix-min.js"></script>
-<script src="../lib/wfa-helpers.js"></script>
-<script src="js/stack.js"></script>
-<script src="js/coordinates.js"></script>
-<script src="js/xzplane.js"></script>
-<script src="js/circle.js"></script>
-<script src="js/cube.js"></script>
-<script src="js/drawCar.js"></script>
-<script src="js/ObligBil.js"></script>
+<body>
+    <canvas id="webgl" width="1000" height="800">
+        Denne nettleseren støtter ikke "canvas"-elementet!
+    </canvas>
+    <div id="fps-counter">
+        FPS: <span id="fps">--</span><br>
+        Base-URI: <span id="uri">--</span>
+    </div>
+    <div id="rotantion-angle">
+        Styrevinkel: <span id="angle">--</span>
+    </div>
+    <div>
+        WASD rotere kamera.<br>
+        VB zoom inn/ut<br>
+        YU sving fremhjulene<br>
+    </div>
+    <script src="../lib/webgl-utils.js"></script>
+    <script src="../lib/webgl-debug.js"></script>
+    <script src="../lib/cuon-utils.js"></script>
+    <script src="../lib/cuon-matrix.js"></script>
+    <script src="../lib/gl-matrix-min.js"></script>
+    <script src="../lib/wfa-helpers.js"></script>
+    <script src="classes/Stack.js"></script>
+    <script src="classes/Coord.js"></script>
+    <script src="classes/XZPlane.js"></script>
+    <script src="classes/Camera.js"></script>
+    <script src="classes/Cube.js"></script>
+    <script src="js/DrawCar.js"></script>
+    <script src="js/ObligBil.js"></script>
 
-<!-- SHADERS -->
-<script id="vertex-shader" type="x-shader/x-vertex">
-		attribute vec3 a_Position;
+    <!-- SHADERS -->
+    <script id="my-vertex-shader" type="x-shader/x-vertex">
+        attribute vec3 a_Position;
 		attribute vec4 a_Color;
 		uniform mat4 u_modelviewMatrix;
 		uniform mat4 u_projectionMatrix;
@@ -47,12 +47,19 @@
 			v_Color = a_Color;
 		}
 	</script>
-<script id="fragment-shader" type="x-shader/x-fragment">
-		precision mediump float;
+    <script id="my-fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
 		varying vec4 v_Color;
 		void main() {
 			gl_FragColor = v_Color;
 		}
 	</script>
+
+    <!--  NB! Dette må kommet ETTER shaderdefinisjonene over -->
+    <script>
+        'use strict';
+        const newCar = new ObligBil();
+        newCar.start();
+    </script>
 </body>
 </html>
